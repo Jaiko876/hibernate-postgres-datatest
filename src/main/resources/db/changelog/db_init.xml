@@ -1,0 +1,197 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.6.xsd">
+
+    <changeSet id="init-1" author="molostvov">
+        <sql>
+            CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+        </sql>
+    </changeSet>
+
+    <changeSet id="init-2" author="molostvov">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists schemaName="public" tableName="statement"/>
+            </not>
+        </preConditions>
+        <sql>
+            CREATE TABLE statement (
+            id serial,
+            reg_num varchar,
+            sending_date timestamp,
+            surname varchar,
+            name varchar,
+            patronymic varchar
+            );
+        </sql>
+    </changeSet>
+
+    <changeSet id="init-3" author="molostvov">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists schemaName="public" tableName="statement_light"/>
+            </not>
+        </preConditions>
+        <sql>
+            CREATE TABLE statement_light (
+            id serial,
+            reg_num varchar,
+            sending_date timestamp
+            );
+        </sql>
+    </changeSet>
+
+    <changeSet id="init-4" author="molostvov">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists schemaName="public" tableName="child_info"/>
+            </not>
+        </preConditions>
+        <sql>
+            CREATE TABLE child_info (
+            id serial,
+            surname varchar,
+            name varchar,
+            patronymic varchar
+            );
+        </sql>
+    </changeSet>
+
+    <changeSet id="init-5" author="molostvov">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists schemaName="public" tableName="child_card"/>
+            </not>
+        </preConditions>
+        <sql>
+            CREATE TABLE child_card (
+            id serial not null,
+            snils integer,
+            statement_id serial,
+            statement_light_id serial,
+            child_info_id serial
+            );
+        </sql>
+    </changeSet>
+
+    <changeSet id="generate-1" author="molostvov">
+        <preConditions onFail="MARK_RAN">
+            <tableExists schemaName="public" tableName="statement"/>
+        </preConditions>
+        <sql>
+            INSERT INTO statement (reg_num, sending_date, surname, name, patronymic)
+            SELECT substr(md5(random()::text), 1, 10),
+            DATE '2018-01-01' + (random() * 700)::integer,
+            substr(md5(random()::text), 1, 10),
+            substr(md5(random()::text), 1, 10),
+            substr(md5(random()::text), 1, 10)
+            FROM generate_series(1, 1000000);
+        </sql>
+    </changeSet>
+
+    <changeSet id="generate-2" author="molostvov">
+        <preConditions onFail="MARK_RAN">
+            <tableExists schemaName="public" tableName="statement_light"/>
+        </preConditions>
+        <sql>
+            INSERT INTO statement_light (reg_num, sending_date)
+            SELECT substr(md5(random()::text), 1, 10),
+            DATE '2018-01-01' + (random() * 700)::integer
+            FROM generate_series(1, 1000000);
+        </sql>
+    </changeSet>
+
+    <changeSet id="generate-3" author="molostvov">
+        <preConditions onFail="MARK_RAN">
+            <tableExists schemaName="public" tableName="child_info"/>
+        </preConditions>
+        <sql>
+            INSERT INTO child_info (surname, name, patronymic)
+            SELECT substr(md5(random()::text), 1, 10),
+            substr(md5(random()::text), 1, 10),
+            substr(md5(random()::text), 1, 10)
+            FROM generate_series(1, 1000000);
+        </sql>
+    </changeSet>
+
+    <changeSet id="generate-4" author="molostvov">
+        <preConditions onFail="MARK_RAN">
+            <tableExists schemaName="public" tableName="child_info"/>
+        </preConditions>
+        <sql>
+            INSERT INTO child_card (snils)
+            SELECT (random() * 23)::integer
+            FROM generate_series(1, 1000000);
+        </sql>
+    </changeSet>
+
+    <changeSet id="create-constraints-statement" author="molostvov">
+        <preConditions onFail="MARK_RAN">
+            <tableExists schemaName="public" tableName="statement"/>
+        </preConditions>
+        <sql>
+            ALTER TABLE statement ADD PRIMARY KEY (id);
+            CREATE INDEX surname_idx ON statement (surname);
+            CREATE INDEX surname_name_idx ON statement (surname,name);
+            CREATE INDEX name_surname_idx ON statement (name,surname);
+            CREATE INDEX name_idx ON statement (name);
+        </sql>
+    </changeSet>
+
+    <changeSet id="create-constraints-statement-light" author="molostvov">
+        <preConditions onFail="MARK_RAN">
+            <tableExists schemaName="public" tableName="statement_light"/>
+        </preConditions>
+        <sql>
+            ALTER TABLE statement_light ADD PRIMARY KEY (id);
+        </sql>
+    </changeSet>
+
+    <changeSet id="create-constraints-child_info" author="molostvov">
+        <preConditions onFail="MARK_RAN">
+            <tableExists schemaName="public" tableName="child_info"/>
+        </preConditions>
+        <sql>
+            ALTER TABLE child_info ADD PRIMARY KEY (id);
+            CREATE INDEX c_surname_idx ON child_info (surname);
+            CREATE INDEX c_surname_name_idx ON child_info (surname,name);
+            CREATE INDEX c_name_surname_idx ON child_info (name,surname);
+            CREATE INDEX c_name_idx ON child_info (name);
+        </sql>
+    </changeSet>
+
+    <changeSet id="create-constrains-child_card" author="molostvov">
+        <preConditions onFail="MARK_RAN">
+            <tableExists schemaName="public" tableName="child_card"/>
+        </preConditions>
+        <sql>
+            ALTER TABLE child_card ADD PRIMARY KEY (id);
+            CREATE INDEX cc_statement_idx ON child_card (statement_id);
+            CREATE INDEX cc_statement_light_idx ON child_card (statement_light_id);
+            CREATE INDEX cc_child_info_idx ON child_card (child_info_id);
+        </sql>
+    </changeSet>
+
+    <changeSet id="create-foreign-keys" author="molostvov">
+        <sql>
+            ALTER TABLE child_info ADD CONSTRAINT statement_light_fk FOREIGN KEY (id) REFERENCES statement_light (id);
+            ALTER TABLE child_card ADD CONSTRAINT statement_id_fk FOREIGN KEY (statement_id) REFERENCES statement (id);
+            ALTER TABLE child_card ADD CONSTRAINT statement_light_fk FOREIGN KEY (statement_light_id) REFERENCES statement_light (id);
+            ALTER TABLE child_card ADD CONSTRAINT child_info_fk FOREIGN KEY (child_info_id) REFERENCES child_info (id);
+
+        </sql>
+    </changeSet>
+
+    <changeSet id="insert-in-child-card" author="molostvov">
+        <preConditions>
+            <tableExists tableName="child_card" schemaName="public"/>
+        </preConditions>
+        <sql>
+                INSERT INTO child_card (snils, statement_id, statement_light_id, child_info_id) VALUES ('1111111', 999999, 999999, 999999);
+        </sql>
+    </changeSet>
+</databaseChangeLog>
